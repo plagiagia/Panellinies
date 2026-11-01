@@ -21,6 +21,17 @@ The topic catalogue is maintained in `src/topics-data.ts`. Each topic has a subj
 
 Import this repository into Vercel and select the Vite framework preset. The build command is `npm run build` and the output directory is `dist`. The PDFs in `public/papers` are included in the deployed site.
 
+## Student discussions
+
+Students can discuss generally, by subject, and under each question. Posting uses Supabase email/password accounts; reading is public. Comments are saved in Supabase and are not stored in the browser.
+
+1. Create a Supabase project and run `comments.sql` in its SQL editor. Manage or remove inappropriate comments from the Supabase table editor.
+2. Set `SUPABASE_URL`, `SUPABASE_ANON_KEY` (the public anon key), and `SUPABASE_SERVICE_ROLE_KEY` as Vercel environment variables. The service role key must stay secret and must never have a `VITE_` prefix. Set the same variables in `.env.local` for local development; see `.env.example`.
+3. In Supabase Authentication URL settings, set the site URL to the deployed site and allow the site's redirect URLs. Configure email confirmation and an email provider appropriate for your audience.
+4. Deploy the changes. The Vite-only `npm run dev` server does not run `/api`; use `vercel dev` with the environment variables for local end-to-end testing.
+
+The discussions currently load the latest 100 comments in each room. They are not a real-time chat; reopen a room to load new comments. Configure rate limits and an active moderation process before opening the discussions to students.
+
 ### GitHub Actions deployment
 
 The workflow in `.github/workflows/ci-cd.yml` builds pull requests and pushes to `main`. After a successful build on `main`, it stages a production deployment, checks the site and PDF links, then promotes it. It can also be run manually on `main`.
