@@ -13,6 +13,10 @@ npm run dev
 
 Open the local address printed by Vite. Run `npm run build` to type-check and create the production site in `dist/`, or `npm run preview` to preview that build.
 
+## Topics and questions
+
+The topic catalogue is maintained in `src/topics-data.ts`. Each topic has a subject, related topic IDs and links to classified questions. It covers the 2025 and 2026 maths and physics papers. Add question anchors to new exam pages and include their year in the data when classifying more papers. Run `npm test` to check topic relationships and question links.
+
 ## Deploy to Vercel
 
 Import this repository into Vercel and select the Vite framework preset. The build command is `npm run build` and the output directory is `dist`. The PDFs in `public/papers` are included in the deployed site.
