@@ -1,0 +1,73 @@
+name: Build and deploy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+    env:
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm install --global vercel@65.9.0
+      - name: Pull production settings
+        run: vercel pull --yes --environment=production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - run: vercel build --prod
+      - name: Stage deployment
+        id: stage
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="$(vercel deploy --prebuilt --prod --skip-domain)"
+          DEPLOYMENT_URL="$url" node --input-type=module -e 'const u = new URL(process.env.DEPLOYMENT_URL); if (u.protocol !== "https:" || u.origin !== process.env.DEPLOYMENT_URL || !u.hostname.endsWith(".vercel.app")) process.exit(1)'
+          printf 'url=%s\n' "$url" >> "$GITHUB_OUTPUT"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Check staged site
+        run: |
+          curl --fail --silent --show-error --location "$DEPLOYMENT_URL/" --output /dev/null
+          curl --fail --silent --show-error --location "$DEPLOYMENT_URL/papers/math-2026.pdf" --output /dev/null
+          curl --fail --silent --show-error --location "$DEPLOYMENT_URL/papers/physics-2026.pdf" --output /dev/null
+        env:
+          DEPLOYMENT_URL: ${{ steps.stage.outputs.url }}
+      - name: Promote to production
+        run: vercel promote "$DEPLOYMENT_URL" --yes
+        env:
+          DEPLOYMENT_URL: ${{ steps.stage.outputs.url }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
