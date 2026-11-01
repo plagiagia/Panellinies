@@ -24,7 +24,8 @@ export default async function handler(req, res) {
       const auth = await fetch(new URL('/auth/v1/user', base), { headers: { apikey: anonKey, Authorization: token } });
       if (!auth.ok) return res.status(401).json({ error: 'Sign in required' });
       const user = await auth.json();
-      name = typeof user.user_metadata?.display_name === 'string' ? user.user_metadata.display_name.trim() : '';
+      const displayName = user.user_metadata?.display_name ?? user.user_metadata?.given_name;
+      name = typeof displayName === 'string' && displayName.trim() ? displayName.trim().slice(0, 40) : 'Μαθητής';
       userId = user.id;
       if (!name || name.length > 40 || typeof userId !== 'string') return res.status(400).json({ error: 'Invalid account name' });
     }
